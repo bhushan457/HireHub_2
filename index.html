@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HireHub Application</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="./src/index.css">
+  
+  <!-- React & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  
+  <!-- Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    const initialJobs = [
+      {
+        id: 1,
+        title: 'Senior Frontend Engineer',
+        company: 'TechFlow',
+        location: 'Bangalore (Hybrid)',
+        category: 'Engineering',
+        type: 'Full-time',
+        experienceRange: '5+ Yrs',
+        salary: '₹18L - ₹25L',
+        description: 'We are looking for an experienced Frontend Engineer to build modern, responsive web applications using React. You will work closely with our design team to implement pixel-perfect UIs with premium aesthetics and dynamic animations.',
+        requirements: ['5+ years React experience', 'Expertise in modern CSS', 'Strong understanding of web performance'],
+        logo: '🚀',
+        recruiterId: 10
+      },
+      {
+        id: 2,
+        title: 'Product Designer',
+        company: 'CreativeSpace',
+        location: 'Mumbai',
+        category: 'Design',
+        type: 'Full-time',
+        experienceRange: '3-5 Yrs',
+        salary: '₹12L - ₹18L',
+        description: 'Join our award-winning design team to craft intuitive and visually stunning user experiences. You will lead the design of our core web platform from concept to handoff.',
+        requirements: ['Portfolio demonstrating web/mobile product design', 'Experience with design systems', 'Prototyping skills'],
+        logo: '🎨',
+        recruiterId: 10
+      },
+      {
+        id: 3,
+        title: 'Backend Developer (Node.js)',
+        company: 'DataSync Systems',
+        location: 'Remote India',
+        category: 'Engineering',
+        type: 'Contract',
+        experienceRange: '1-3 Yrs',
+        salary: '₹8L - ₹12L',
+        description: 'Looking for a strong Node.js developer to help scale our microservices architecture. You will be responsible for optimizing database queries, building RESTful APIs, and implementing robust security measures.',
+        requirements: ['Strong Node.js and Express experience', 'PostgreSQL optimization', 'AWS cloud infrastructure deployment'],
+        logo: '⚙️',
+        recruiterId: 11
+      },
+      {
+        id: 4,
+        title: 'Marketing Manager',
+        company: 'BrandLift',
+        location: 'Delhi NCR',
+        category: 'Marketing',
+        type: 'Full-time',
+        experienceRange: '3-5 Yrs',
+        salary: '₹10L - ₹15L',
+        description: 'Drive our growth strategy across digital channels. You will oversee paid campaigns, content marketing, and SEO initiatives, analyzing performance data to refine our approach and maximize ROI.',
+        requirements: ['3+ years digital marketing', 'Data-driven mindset with GA4 expertise', 'Excellent copywriting skills'],
+        logo: '📈',
+        recruiterId: 11
+      },
+      {
+        id: 5,
+        title: 'Data Scientist',
+        company: 'Quantify',
+        location: 'Pune',
+        category: 'Data',
+        type: 'Full-time',
+        experienceRange: '0-3 Yrs',
+        salary: '₹6L - ₹10L',
+        description: 'Analyze complex datasets to uncover actionable insights. Build predictive models using Python and ML libraries.',
+        requirements: ['MSc/PhD in quantitative field', 'Strong Python & SQL', 'Experience with scikit-learn/TensorFlow'],
+        logo: '📊',
+        recruiterId: 11
+      }
+    ];
+
+    function App() {
+      // Global State
+      const [jobs, setJobs] = useState(initialJobs);
+      const [currentView, setCurrentView] = useState('home'); // home, login, register, dashboard
+      const [currentUser, setCurrentUser] = useState(null);
+      
+      const [searchQuery, setSearchQuery] = useState('');
+      const [filterCategory, setFilterCategory] = useState('');
+      const [filterExperience, setFilterExperience] = useState('');
+
+      // Job Modal State
+      const [selectedJob, setSelectedJob] = useState(null);
+      const [isApplying, setIsApplying] = useState(false);
+      const [applicationSuccess, setApplicationSuccess] = useState(false);
+
+      // --- Navigation Handlers ---
+      const navigateTo = (view) => {
+        setCurrentView(view);
+        window.scrollTo(0, 0);
+        closeModals();
+      };
+
+      // --- Auth Handlers ---
+      const handleLogin = (email, password, role) => {
+        setCurrentUser({
+          id: Date.now(),
+          name: email.split('@')[0] || 'User',
+          email: email,
+          role: role,
+          appliedJobs: [],
+          savedJobs: [],
+          skills: role === 'candidate' ? ['React', 'JavaScript', 'Tailwind CSS'] : [],
+          experience: role === 'candidate' ? '3 Yrs' : '',
+          noticePeriod: role === 'candidate' ? '30 Days' : '',
+          resumeFile: null
+        });
+        navigateTo('dashboard');
+      };
+
+      const handleRegister = (name, email, password, role) => {
+        setCurrentUser({
+          id: Date.now(),
+          name: name || 'New User',
+          email: email,
+          role: role,
+          appliedJobs: [],
+          savedJobs: [],
+          skills: role === 'candidate' ? [] : [],
+          experience: role === 'candidate' ? 'Fresher' : '',
+          noticePeriod: role === 'candidate' ? 'Immediate' : '',
+          resumeFile: null
+        });
+        navigateTo('dashboard');
+      };
+
+      const handleLogout = () => {
+        setCurrentUser(null);
+        navigateTo('home');
+      };
+
+      const handleUploadResume = (fileUrl) => {
+        setCurrentUser(prev => ({ ...prev, resumeFile: fileUrl }));
+      };
+
+      // --- Job Actions ---
+      const toggleSaveJob = (jobId) => {
+        if (!currentUser) return navigateTo('login');
+        if (currentUser.role === 'recruiter') return; 
+        
+        setCurrentUser(prev => {
+          const isSaved = prev.savedJobs.includes(jobId);
+          return {
+            ...prev,
+            savedJobs: isSaved 
+              ? prev.savedJobs.filter(id => id !== jobId)
+              : [...prev.savedJobs, jobId]
+          };
+        });
+      };
+
+      const openJobDetails = (job) => {
+        setSelectedJob(job);
+        setIsApplying(false);
+        setApplicationSuccess(false);
+      };
+
+      const closeModals = () => {
+        setSelectedJob(null);
+        setIsApplying(false);
+        setApplicationSuccess(false);
+      };
+
+      const applyForJob = (jobId) => {
+        if (!currentUser) {
+           setIsApplying(true); 
+           setApplicationSuccess(true);
+        } else {
+           setCurrentUser(prev => ({
+             ...prev,
+             appliedJobs: [...new Set([...prev.appliedJobs, jobId])]
+           }));
+           setApplicationSuccess(true);
+        }
+      };
+
+      // --- Recruiter Actions ---
+      const handlePostJob = (newJob) => {
+        setJobs(prevJobs => [{ ...newJob, id: Date.now(), recruiterId: currentUser.id, logo: '🏢' }, ...prevJobs]);
+      };
+
+      const handleDeleteJob = (jobId) => {
+        setJobs(prevJobs => prevJobs.filter(j => j.id !== jobId));
+      };
+
+      // --- Render Helpers ---
+      const renderView = () => {
+        switch(currentView) {
+          case 'login':
+            return <LoginView onLogin={handleLogin} onSwitchToRegister={() => navigateTo('register')} />;
+          case 'register':
+            return <RegisterView onRegister={handleRegister} onSwitchToLogin={() => navigateTo('login')} />;
+          case 'dashboard':
+            return currentUser ? (
+              <DashboardView 
+                user={currentUser} 
+                jobs={jobs} 
+                onViewJob={openJobDetails} 
+                onRemoveSaved={toggleSaveJob}
+                onPostJob={handlePostJob}
+                onDeleteJob={handleDeleteJob}
+                onUploadResume={handleUploadResume}
+              />
+            ) : (
+              <LoginView onLogin={handleLogin} onSwitchToRegister={() => navigateTo('register')} />
+            );
+          case 'home':
+          default:
+            return (
+              <HomeView 
+                jobs={jobs} 
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                filterCategory={filterCategory}
+                setFilterCategory={setFilterCategory}
+                filterExperience={filterExperience}
+                setFilterExperience={setFilterExperience}
+                onViewJob={openJobDetails}
+                currentUser={currentUser}
+                onSaveJob={toggleSaveJob}
+              />
+            );
+        }
+      };
+
+      return (
+        <React.Fragment>
+          <Navbar 
+            currentUser={currentUser} 
+            onNavigate={navigateTo} 
+            onLogout={handleLogout} 
+          />
+          
+          {renderView()}
+
+          {/* Modals */}
+          {selectedJob && !isApplying && !applicationSuccess && (
+            <JobDetailsModal 
+              job={selectedJob} 
+              onClose={closeModals} 
+              onApply={() => setIsApplying(true)} 
+              isSaved={currentUser?.role === 'candidate' && currentUser?.savedJobs.includes(selectedJob.id)}
+              onSave={() => toggleSaveJob(selectedJob.id)}
+              hasApplied={currentUser?.role === 'candidate' && currentUser?.appliedJobs.includes(selectedJob.id)}
+              isRecruiter={currentUser?.role === 'recruiter'}
+            />
+          )}
+
+          {isApplying && !applicationSuccess && (
+            <ApplicationModal 
+              job={selectedJob} 
+              onClose={closeModals} 
+              onSuccess={() => applyForJob(selectedJob.id)} 
+              currentUser={currentUser}
+            />
+          )}
+
+          {applicationSuccess && (
+            <SuccessModal onClose={closeModals} isLoggedIn={!!currentUser && currentUser.role === 'candidate'} />
+          )}
+        </React.Fragment>
+      );
+    }
+
+    // --- Components ---
+
+    function Navbar({ currentUser, onNavigate, onLogout }) {
+      return (
+        <header className="glass-panel" style={{ borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '1rem 0', position: 'sticky', top: 0, zIndex: 50 }}>
+          <div className="container flex items-center justify-between">
+            <h1 
+              className="text-gradient" 
+              style={{ fontSize: '1.5rem', margin: 0, letterSpacing: '-0.5px', cursor: 'pointer' }}
+              onClick={() => onNavigate('home')}
+            >
+              HireHub.
+            </h1>
+            <nav className="flex gap-4 items-center">
+              <span className="text-muted" style={{cursor: 'pointer'}} onClick={() => onNavigate('home')}>Jobs</span>
+              
+              {currentUser ? (
+                <React.Fragment>
+                  <span className="text-primary" style={{cursor: 'pointer', fontWeight: 600}} onClick={() => onNavigate('dashboard')}>Dashboard</span>
+                  <div style={{height: '24px', width: '1px', background: 'var(--border-color)'}}></div>
+                  <div className="flex items-center gap-2">
+                    <div style={{width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary-accent)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'}} title={currentUser.role}>
+                      {currentUser.name.charAt(0).toUpperCase()}
+                    </div>
+                    <button className="btn btn-secondary" style={{ padding: '0.4rem 1rem' }} onClick={onLogout}>Logout</button>
+                  </div>
+                </React.Fragment>
+              ) : (
+                <React.Fragment>
+                  <button className="btn btn-secondary" style={{ padding: '0.4rem 1rem' }} onClick={() => onNavigate('login')}>Login</button>
+                  <button className="btn btn-primary" style={{ padding: '0.4rem 1rem' }} onClick={() => onNavigate('register')}>Register</button>
+                </React.Fragment>
+              )}
+            </nav>
+          </div>
+        </header>
+      );
+    }
+
+    function HomeView({ jobs, searchQuery, setSearchQuery, filterCategory, setFilterCategory, filterExperience, setFilterExperience, onViewJob, currentUser, onSaveJob }) {
+      
+      const filteredJobs = useMemo(() => {
+        return jobs.filter(job => {
+          const matchQuery = job.title.toLowerCase().includes(searchQuery.toLowerCase()) || job.company.toLowerCase().includes(searchQuery.toLowerCase()) || job.location.toLowerCase().includes(searchQuery.toLowerCase());
+          const matchCategory = filterCategory === '' || job.category === filterCategory;
+          const matchExperience = filterExperience === '' || job.experienceRange === filterExperience;
+          return matchQuery && matchCategory && matchExperience;
+        });
+      }, [jobs, searchQuery, filterCategory, filterExperience]);
+
+      const categories = [...new Set(jobs.map(j => j.category))];
+      const experienceRanges = [...new Set(jobs.map(j => j.experienceRange).filter(Boolean))];
+
+      return (
+        <React.Fragment>
+          <section className="container my-8" style={{ textAlign: 'center', padding: '4rem 1rem' }}>
+            <h1 style={{ fontSize: '3.5rem', marginBottom: '1rem', lineHeight: '1.1' }}>
+              Find Your <span className="text-gradient">Dream Role</span> Today
+            </h1>
+            <p className="text-muted text-lg mb-4" style={{ maxWidth: '600px', margin: '0 auto 2rem' }}>
+              Connect with top companies and seamless application processes. Discover opportunities across India that match your skills and aspirations.
+            </p>
+            
+            <div className="glass-panel mx-auto flex" style={{ maxWidth: '900px', padding: '1rem', gap: '1rem', flexWrap: 'wrap' }}>
+              <input 
+                type="text" 
+                placeholder="Search jobs, companies, or cities..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ flex: '2 1 250px', padding: '0.8rem 1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none', fontSize: '1rem' }}
+              />
+              <select 
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                style={{ flex: '1 1 150px', padding: '0.8rem 1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none', fontSize: '1rem', cursor: 'pointer' }}
+              >
+                <option value="" style={{color:'black'}}>All Functions</option>
+                {categories.map(cat => <option key={cat} value={cat} style={{color:'black'}}>{cat}</option>)}
+              </select>
+              <select 
+                value={filterExperience}
+                onChange={(e) => setFilterExperience(e.target.value)}
+                style={{ flex: '1 1 150px', padding: '0.8rem 1rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none', fontSize: '1rem', cursor: 'pointer' }}
+              >
+                <option value="" style={{color:'black'}}>Experience</option>
+                {experienceRanges.map(exp => <option key={exp} value={exp} style={{color:'black'}}>{exp}</option>)}
+              </select>
+            </div>
+          </section>
+          
+          <main className="container my-8 text-left">
+            <h2 className="mb-4 text-gradient" style={{ fontSize: '2rem' }}>
+              {(searchQuery || filterCategory || filterExperience) ? 'Search Results' : 'Recommended Opportunities'}
+            </h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredJobs.length > 0 ? filteredJobs.map(job => (
+                <JobCard 
+                  key={job.id} 
+                  job={job} 
+                  onClick={() => onViewJob(job)} 
+                  isSaved={currentUser?.role === 'candidate' && currentUser?.savedJobs.includes(job.id)}
+                  onSave={currentUser?.role !== 'recruiter' ? ((e) => { e.stopPropagation(); onSaveJob(job.id); }) : undefined}
+                  hideSaveButton={currentUser?.role === 'recruiter'}
+                />
+              )) : (
+                <div className="glass-panel" style={{ gridColumn: '1 / -1', padding: '3rem', textAlign: 'center' }}>
+                  <h3 className="text-muted">No jobs match your search criteria. Try modifying your experience or location filters.</h3>
+                </div>
+              )}
+            </div>
+          </main>
+        </React.Fragment>
+      );
+    }
+
+    function LoginView({ onLogin, onSwitchToRegister }) {
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [role, setRole] = useState('candidate'); 
+      const [error, setError] = useState('');
+
+      const validate = () => {
+        if (!email.toLowerCase().endsWith('@gmail.com')) {
+          setError('Email must be a valid @gmail.com address.');
+          return false;
+        }
+        if (password.length < 8) {
+          setError('Password must be at least 8 characters long.');
+          return false;
+        }
+        setError('');
+        return true;
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if(validate()) onLogin(email, password, role);
+      };
+
+      return (
+        <div className="container flex justify-center items-center" style={{ minHeight: '80vh' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '2.5rem' }}>
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <h2 style={{ fontSize: '2rem' }}>Welcome Back</h2>
+              <p className="text-muted">Sign in to your HireHub account</p>
+            </div>
+
+            {error && <div style={{background: 'rgba(239, 68, 68, 0.2)', border: '1px solid var(--danger)', color: '#fca5a5', padding: '0.8rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.9rem'}}>{error}</div>}
+
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+              <div className="flex gap-2" style={{marginBottom: '0.5rem'}}>
+                <button type="button" onClick={() => setRole('candidate')} style={{flex: 1, padding: '0.6rem', border: `1px solid ${role === 'candidate' ? 'var(--primary-accent)' : 'var(--border-color)'}`, background: role === 'candidate' ? 'rgba(59, 130, 246, 0.2)' : 'transparent', color: 'white', borderRadius: 'var(--radius-md)', transition: 'all 0.2s'}}>Candidate</button>
+                <button type="button" onClick={() => setRole('recruiter')} style={{flex: 1, padding: '0.6rem', border: `1px solid ${role === 'recruiter' ? 'var(--primary-accent)' : 'var(--border-color)'}`, background: role === 'recruiter' ? 'rgba(59, 130, 246, 0.2)' : 'transparent', color: 'white', borderRadius: 'var(--radius-md)', transition: 'all 0.2s'}}>Recruiter</button>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted" style={{ display: 'block', marginBottom: '0.4rem' }}>Email Address (must be @gmail.com)</label>
+                <input required type="email" value={email} onChange={e=>{setEmail(e.target.value); setError('');}} placeholder="you@gmail.com" style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none' }} />
+              </div>
+              <div>
+                <label className="text-sm text-muted" style={{ display: 'block', marginBottom: '0.4rem' }}>Password (min 8 chars)</label>
+                <input required type="password" value={password} onChange={e=>{setPassword(e.target.value); setError('');}} placeholder="••••••••" style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none' }} />
+              </div>
+              <button type="submit" className="btn btn-primary" style={{ padding: '0.8rem', marginTop: '0.5rem' }}>Sign In</button>
+            </form>
+
+            <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+              <p className="text-sm text-muted">Don't have an account? <span style={{ color: 'var(--primary-accent)', cursor: 'pointer' }} onClick={onSwitchToRegister}>Register</span></p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function RegisterView({ onRegister, onSwitchToLogin }) {
+      const [name, setName] = useState('');
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [role, setRole] = useState('candidate');
+      const [error, setError] = useState('');
+
+      const validate = () => {
+        if (!email.toLowerCase().endsWith('@gmail.com')) {
+          setError('Email must be a valid @gmail.com address.');
+          return false;
+        }
+        if (password.length < 8) {
+          setError('Password must be at least 8 characters long.');
+          return false;
+        }
+        setError('');
+        return true;
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if(validate()) onRegister(name, email, password, role);
+      };
+
+      return (
+        <div className="container flex justify-center items-center" style={{ minHeight: '80vh' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '2.5rem' }}>
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <h2 style={{ fontSize: '2rem' }}>Create Account</h2>
+              <p className="text-muted">Join HireHub to find your next role</p>
+            </div>
+
+            {error && <div style={{background: 'rgba(239, 68, 68, 0.2)', border: '1px solid var(--danger)', color: '#fca5a5', padding: '0.8rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.9rem'}}>{error}</div>}
+
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+              <div className="flex gap-2" style={{marginBottom: '0.5rem'}}>
+                <button type="button" onClick={() => setRole('candidate')} style={{flex: 1, padding: '0.6rem', border: `1px solid ${role === 'candidate' ? 'var(--primary-accent)' : 'var(--border-color)'}`, background: role === 'candidate' ? 'rgba(59, 130, 246, 0.2)' : 'transparent', color: 'white', borderRadius: 'var(--radius-md)', transition: 'all 0.2s'}}>Candidate</button>
+                <button type="button" onClick={() => setRole('recruiter')} style={{flex: 1, padding: '0.6rem', border: `1px solid ${role === 'recruiter' ? 'var(--primary-accent)' : 'var(--border-color)'}`, background: role === 'recruiter' ? 'rgba(59, 130, 246, 0.2)' : 'transparent', color: 'white', borderRadius: 'var(--radius-md)', transition: 'all 0.2s'}}>Recruiter</button>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted" style={{ display: 'block', marginBottom: '0.4rem' }}>Full Name / Company Name</label>
+                <input required type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="John Doe" style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none' }} />
+              </div>
+              <div>
+                <label className="text-sm text-muted" style={{ display: 'block', marginBottom: '0.4rem' }}>Email Address (must be @gmail.com)</label>
+                <input required type="email" value={email} onChange={e=>{setEmail(e.target.value); setError('');}} placeholder="you@gmail.com" style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none' }} />
+              </div>
+              <div>
+                <label className="text-sm text-muted" style={{ display: 'block', marginBottom: '0.4rem' }}>Password (min 8 chars)</label>
+                <input required type="password" value={password} onChange={e=>{setPassword(e.target.value); setError('');}} placeholder="••••••••" style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none' }} />
+              </div>
+              <button type="submit" className="btn btn-primary" style={{ padding: '0.8rem', marginTop: '0.5rem' }}>Register</button>
+            </form>
+
+            <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+              <p className="text-sm text-muted">Already have an account? <span style={{ color: 'var(--primary-accent)', cursor: 'pointer' }} onClick={onSwitchToLogin}>Sign In</span></p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function DashboardView({ user, jobs, onViewJob, onRemoveSaved, onPostJob, onDeleteJob, onUploadResume }) {
+      if (user.role === 'recruiter') {
+        return <RecruiterDashboard user={user} jobs={jobs} onPostJob={onPostJob} onDeleteJob={onDeleteJob} onViewJob={onViewJob} />;
+      }
+      return <CandidateDashboard user={user} jobs={jobs} onViewJob={onViewJob} onRemoveSaved={onRemoveSaved} onUploadResume={onUploadResume} />;
+    }
+
+    function CandidateDashboard({ user, jobs, onViewJob, onRemoveSaved, onUploadResume }) {
+      const savedJobs = jobs.filter(j => user.savedJobs.includes(j.id));
+      const appliedJobsList = jobs.filter(j => user.appliedJobs.includes(j.id));
+      const [activeTab, setActiveTab] = useState('profile');
+      const fileInputRef = useRef(null);
+
+      const handleFileChange = (e) => {
+        if(e.target.files && e.target.files[0]) {
+           onUploadResume(e.target.files[0].name);
+        }
+      };
+
+      return (
+        <div className="container my-8">
+          <div className="glass-panel" style={{ padding: '2rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
+             <div style={{width: '90px', height: '90px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary-accent), var(--secondary-accent))', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', fontWeight: 'bold'}}>
+                {user.name.charAt(0).toUpperCase()}
+             </div>
+             <div style={{ flex: 1 }}>
+               <h1 style={{fontSize: '2rem', marginBottom: '0.2rem'}}>{user.name}</h1>
+               <div className="text-muted mb-2">{user.email} &bull; Profile Strength: High</div>
+               <div className="flex gap-4 mt-2 mb-2 flex-wrap">
+                 <span className="text-sm" style={{ background: 'rgba(255,255,255,0.05)', padding: '0.4rem 0.8rem', borderRadius: 'var(--radius-sm)' }}>
+                   📈 <strong>{user.experience}</strong> Exp.
+                 </span>
+                 <span className="text-sm" style={{ background: 'rgba(255,255,255,0.05)', padding: '0.4rem 0.8rem', borderRadius: 'var(--radius-sm)' }}>
+                   ⏱ <strong>{user.noticePeriod}</strong> Notice
+                 </span>
+               </div>
+               <div className="flex gap-4 mt-2">
+                 <span className="text-sm text-primary">
+                   <strong>{user.appliedJobs.length}</strong> Applications
+                 </span>
+                 <span className="text-sm text-primary">
+                   <strong>{user.savedJobs.length}</strong> Saved
+                 </span>
+               </div>
+             </div>
+
+             <div className="flex-col items-center flex" style={{ background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: 'var(--radius-md)', minWidth: '250px' }}>
+                <h3 className="mb-2 text-sm text-muted">Resume / CV</h3>
+                {user.resumeFile ? (
+                   <div className="text-success mb-2">✓ {user.resumeFile} attached</div>
+                ) : (
+                   <div className="text-danger mb-2">⚠ No resume uploaded</div>
+                )}
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{display: 'none'}} accept=".pdf,.doc,.docx" />
+                <button className="btn btn-outline" style={{width: '100%'}} onClick={() => fileInputRef.current?.click()}>
+                   {user.resumeFile ? 'Update Resume' : 'Upload Resume'}
+                </button>
+             </div>
+          </div>
+
+          <div className="flex gap-4" style={{borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem', overflowX: 'auto'}}>
+            <button 
+              className="text-lg whitespace-nowrap" 
+              style={{ padding: '0.8rem 1.5rem', borderBottom: activeTab === 'profile' ? '2px solid var(--primary-accent)' : '2px solid transparent', color: activeTab === 'profile' ? 'var(--text-primary)' : 'var(--text-muted)' }}
+              onClick={() => setActiveTab('profile')}
+            >
+              My Profile
+            </button>
+            <button 
+              className="text-lg whitespace-nowrap" 
+              style={{ padding: '0.8rem 1.5rem', borderBottom: activeTab === 'saved' ? '2px solid var(--primary-accent)' : '2px solid transparent', color: activeTab === 'saved' ? 'var(--text-primary)' : 'var(--text-muted)' }}
+              onClick={() => setActiveTab('saved')}
+            >
+              Saved Jobs
+            </button>
+            <button 
+              className="text-lg whitespace-nowrap" 
+              style={{ padding: '0.8rem 1.5rem', borderBottom: activeTab === 'applied' ? '2px solid var(--primary-accent)' : '2px solid transparent', color: activeTab === 'applied' ? 'var(--text-primary)' : 'var(--text-muted)' }}
+              onClick={() => setActiveTab('applied')}
+            >
+              Applied Jobs
+            </button>
+          </div>
+
+          <div className="text-left">
+            {activeTab === 'profile' && (
+              <div className="glass-panel" style={{ padding: '2rem', maxWidth: '800px' }}>
+                 <h2 className="mb-4">Key Skills & Tags</h2>
+                 <div className="flex gap-2 flex-wrap mb-6">
+                    {user.skills.length > 0 ? user.skills.map(skill => (
+                      <span key={skill} style={{background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary-accent)', padding: '0.4rem 1rem', borderRadius: 'var(--radius-full)', border: '1px solid rgba(59, 130, 246, 0.3)'}}>
+                        {skill}
+                      </span>
+                    )) : (
+                      <span className="text-muted">No skills added yet.</span>
+                    )}
+                 </div>
+                 
+                 <h2 className="mb-4">Basic Details</h2>
+                 <div className="grid md:grid-cols-2 gap-4">
+                    <div style={{background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: 'var(--radius-md)'}}>
+                       <div className="text-sm text-muted mb-1">Total Experience</div>
+                       <div className="text-lg">{user.experience}</div>
+                    </div>
+                    <div style={{background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: 'var(--radius-md)'}}>
+                       <div className="text-sm text-muted mb-1">Notice Period</div>
+                       <div className="text-lg">{user.noticePeriod}</div>
+                    </div>
+                    <div style={{background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: 'var(--radius-md)'}}>
+                       <div className="text-sm text-muted mb-1">Current Location</div>
+                       <div className="text-lg">Bangalore, India</div>
+                    </div>
+                 </div>
+              </div>
+            )}
+
+            {activeTab === 'saved' && (
+               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+               {savedJobs.length > 0 ? savedJobs.map(job => (
+                <JobCard 
+                  key={job.id} 
+                  job={job} 
+                  onClick={() => onViewJob(job)} 
+                  isSaved={true}
+                  onSave={(e) => { e.stopPropagation(); onRemoveSaved(job.id); }}
+                />
+               )) : <div className="text-muted" style={{gridColumn: '1 / -1', padding: '2rem'}}>You haven't saved any jobs yet.</div>}
+               </div>
+            )}
+            
+            {activeTab === 'applied' && (
+               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+               {appliedJobsList.length > 0 ? appliedJobsList.map(job => (
+                <JobCard 
+                  key={job.id} 
+                  job={job} 
+                  onClick={() => onViewJob(job)} 
+                  hideSaveButton={true}
+                  statusBadge="Applied"
+                />
+               )) : <div className="text-muted" style={{gridColumn: '1 / -1', padding: '2rem'}}>You haven't applied to any jobs yet.</div>}
+               </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function RecruiterDashboard({ user, jobs, onPostJob, onDeleteJob, onViewJob }) {
+      const myJobs = jobs.filter(j => j.recruiterId === user.id);
+      const [activeTab, setActiveTab] = useState('posted'); 
+      const [formData, setFormData] = useState({ title: '', company: user.name, location: 'Bangalore', category: 'Engineering', type: 'Full-time', experienceRange: '1-3 Yrs', salary: '', description: '', requirements: '' });
+
+      const handlePostSubmit = (e) => {
+        e.preventDefault();
+        onPostJob({
+          ...formData, 
+          requirements: formData.requirements.split(',').map(s => s.trim()).filter(s => s) 
+        });
+        setFormData({ title: '', company: user.name, location: 'Bangalore', category: 'Engineering', type: 'Full-time', experienceRange: '1-3 Yrs', salary: '', description: '', requirements: '' });
+        setActiveTab('posted'); 
+      };
+
+      return (
+        <div className="container my-8">
+          <div className="glass-panel" style={{ padding: '2rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '2rem' }}>
+             <div style={{width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--secondary-accent), #ec4899)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', fontWeight: 'bold'}}>
+                {user.name.charAt(0).toUpperCase()}
+             </div>
+             <div>
+               <h1 style={{fontSize: '2rem', marginBottom: '0.2rem'}}>{user.name}</h1>
+               <div className="text-muted">{user.email} &bull; Recruiter (Employer Profile)</div>
+               <div className="flex gap-4 mt-2">
+                 <span className="text-sm" style={{ background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-sm)' }}>
+                   <strong>{myJobs.length}</strong> Active Listings
+                 </span>
+               </div>
+             </div>
+          </div>
+
+          <div className="flex gap-4" style={{borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem'}}>
+            <button 
+              className="text-lg" 
+              style={{ padding: '0.8rem 1.5rem', borderBottom: activeTab === 'posted' ? '2px solid var(--primary-accent)' : '2px solid transparent', color: activeTab === 'posted' ? 'var(--text-primary)' : 'var(--text-muted)' }}
+              onClick={() => setActiveTab('posted')}
+            >
+              My Posted Jobs
+            </button>
+            <button 
+              className="text-lg" 
+              style={{ padding: '0.8rem 1.5rem', borderBottom: activeTab === 'post_new' ? '2px solid var(--primary-accent)' : '2px solid transparent', color: activeTab === 'post_new' ? 'var(--text-primary)' : 'var(--text-muted)' }}
+              onClick={() => setActiveTab('post_new')}
+            >
+              + Post New Job
+            </button>
+          </div>
+
+          <div className="text-left">
+            {activeTab === 'posted' && (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {myJobs.length > 0 ? myJobs.map(job => (
+                  <JobCard 
+                    key={job.id} 
+                    job={job} 
+                    onClick={() => onViewJob(job)} 
+                    hideSaveButton={true}
+                    onDelete={(e) => { e.stopPropagation(); onDeleteJob(job.id); }}
+                  />
+                )) : <div className="text-muted" style={{gridColumn: '1 / -1', padding: '2rem'}}>You haven't posted any jobs yet.</div>}
+              </div>
+            )}
+            
+            {activeTab === 'post_new' && (
+              <div className="glass-panel" style={{ padding: '2rem', maxWidth: '800px' }}>
+                <h2 className="mb-4">Create New Job Listing</h2>
+                <form onSubmit={handlePostSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label className="text-sm text-muted block" style={{marginBottom: '0.3rem'}}>Job Title</label>
+                    <input required type="text" value={formData.title} onChange={e=>setFormData({...formData, title: e.target.value})} placeholder="e.g. Senior Software Engineer" style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted block" style={{marginBottom: '0.3rem'}}>Company / Dept.</label>
+                    <input required type="text" value={formData.company} onChange={e=>setFormData({...formData, company: e.target.value})} style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted block" style={{marginBottom: '0.3rem'}}>Location (City/Remote)</label>
+                    <input required type="text" value={formData.location} onChange={e=>setFormData({...formData, location: e.target.value})} placeholder="e.g. Bangalore, Mumbai" style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted block" style={{marginBottom: '0.3rem'}}>Category</label>
+                    <select value={formData.category} onChange={e=>setFormData({...formData, category: e.target.value})} style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none', cursor: 'pointer' }}>
+                       <option value="Engineering" style={{color:'black'}}>Engineering</option>
+                       <option value="Design" style={{color:'black'}}>Design</option>
+                       <option value="Marketing" style={{color:'black'}}>Marketing</option>
+                       <option value="Data" style={{color:'black'}}>Data</option>
+                       <option value="Other" style={{color:'black'}}>Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted block" style={{marginBottom: '0.3rem'}}>Type</label>
+                    <select value={formData.type} onChange={e=>setFormData({...formData, type: e.target.value})} style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none', cursor: 'pointer' }}>
+                       <option value="Full-time" style={{color:'black'}}>Full-time</option>
+                       <option value="Part-time" style={{color:'black'}}>Part-time</option>
+                       <option value="Contract" style={{color:'black'}}>Contract</option>
+                       <option value="Internship" style={{color:'black'}}>Internship</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted block" style={{marginBottom: '0.3rem'}}>Experience Required</label>
+                    <select value={formData.experienceRange} onChange={e=>setFormData({...formData, experienceRange: e.target.value})} style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none', cursor: 'pointer' }}>
+                       <option value="Fresher" style={{color:'black'}}>Fresher</option>
+                       <option value="0-3 Yrs" style={{color:'black'}}>0-3 Yrs</option>
+                       <option value="1-3 Yrs" style={{color:'black'}}>1-3 Yrs</option>
+                       <option value="3-5 Yrs" style={{color:'black'}}>3-5 Yrs</option>
+                       <option value="5+ Yrs" style={{color:'black'}}>5+ Yrs</option>
+                    </select>
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label className="text-sm text-muted block" style={{marginBottom: '0.3rem'}}>Salary Range (₹ LPA)</label>
+                    <input required type="text" value={formData.salary} onChange={e=>setFormData({...formData, salary: e.target.value})} placeholder="e.g. ₹12L - ₹15L" style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none' }} />
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label className="text-sm text-muted block" style={{marginBottom: '0.3rem'}}>Job Description</label>
+                    <textarea required rows="4" value={formData.description} onChange={e=>setFormData({...formData, description: e.target.value})} placeholder="Describe the role..." style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none', resize: 'vertical' }}></textarea>
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label className="text-sm text-muted block" style={{marginBottom: '0.3rem'}}>Requirements (comma-separated)</label>
+                    <input required type="text" value={formData.requirements} onChange={e=>setFormData({...formData, requirements: e.target.value})} placeholder="e.g. 3+ years React, CSS animation skills, CS Degree" style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none' }} />
+                  </div>
+
+                  <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
+                    <button type="submit" className="btn btn-primary" style={{ padding: '0.8rem 2rem' }}>Post Job</button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function JobCard({ job, onClick, isSaved, onSave, hideSaveButton, statusBadge, onDelete }) {
+      return (
+        <div className="glass-panel flex-col" style={{ padding: '1.5rem', cursor: 'pointer', display: 'flex', position: 'relative' }} onClick={onClick}>
+          
+          {!hideSaveButton && onSave && (
+            <button 
+              onClick={onSave} 
+              style={{ position: 'absolute', top: '1.2rem', right: '1.2rem', fontSize: '1.5rem', zIndex: 10, outline: 'none' }}
+              title={isSaved ? "Remove Saved" : "Save Job"}
+            >
+              {isSaved ? '★' : '☆'}
+            </button>
+          )}
+
+          {onDelete && (
+            <button 
+              onClick={onDelete} 
+              style={{ position: 'absolute', top: '1.2rem', right: '1.2rem', fontSize: '1rem', zIndex: 10, outline: 'none', padding: '0.2rem 0.6rem', border: '1px solid var(--danger)', color: '#fca5a5', borderRadius: 'var(--radius-md)', background: 'rgba(239, 68, 68, 0.1)' }}
+              title="Delete Listing"
+            >
+              Delete
+            </button>
+          )}
+
+          <div className="flex justify-between items-start mb-4">
+            <div style={{ fontSize: '2rem', marginTop: '0.5rem' }}>{job.logo}</div>
+            <div className="flex flex-col items-end gap-2" style={{marginRight: (onSave || onDelete) ? '2rem' : '0'}}>
+               <span className="text-sm" style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--primary-accent)', padding: '0.2rem 0.8rem', borderRadius: 'var(--radius-full)' }}>
+                 {job.experienceRange || 'Fresher'}
+               </span>
+               {statusBadge && (
+                 <span className="text-sm" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)', padding: '0.2rem 0.8rem', borderRadius: 'var(--radius-full)' }}>
+                   ✓ {statusBadge}
+                 </span>
+               )}
+            </div>
+          </div>
+          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.25rem', paddingRight: '1.5rem' }}>{job.title}</h3>
+          <div className="text-muted mb-3">{job.company}</div>
+          <div className="text-sm text-muted mb-4 flex gap-3">
+             <span>📍 {job.location}</span>
+             <span>💼 {job.type}</span>
+          </div>
+          <div className="mt-4 flex justify-between items-center" style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{job.salary}</span>
+            <button className="btn btn-outline" style={{ padding: '0.3rem 0.8rem', fontSize: '0.85rem' }}>View Details</button>
+          </div>
+        </div>
+      );
+    }
+
+    function ModalBackdrop({ children, onClose }) {
+      return (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '1rem' }} onClick={onClose}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '600px', animation: 'fadeInUp 0.3s ease-out' }}>
+            {children}
+          </div>
+        </div>
+      );
+    }
+
+    function JobDetailsModal({ job, onClose, onApply, isSaved, onSave, hasApplied, isRecruiter }) {
+      return (
+        <ModalBackdrop onClose={onClose}>
+          <div className="glass-panel text-left" style={{ padding: '2rem', background: 'var(--bg-secondary)' }}>
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-4">
+                <div style={{ fontSize: '2.5rem', background: 'var(--bg-main)', padding: '1rem', borderRadius: 'var(--radius-md)' }}>{job.logo}</div>
+                <div>
+                  <h2 style={{ fontSize: '1.5rem', marginBottom: '0.1rem' }}>{job.title}</h2>
+                  <div className="text-primary">{job.company}</div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {!isRecruiter && (
+                  <button onClick={onSave} style={{ fontSize: '1.5rem', color: isSaved ? 'var(--primary-accent)' : 'var(--text-muted)' }}>
+                    {isSaved ? '★' : '☆'}
+                  </button>
+                )}
+                <button onClick={onClose} style={{ fontSize: '1.5rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>&times;</button>
+              </div>
+            </div>
+            
+            <div className="flex gap-2 mb-4 flex-wrap">
+              <span className="text-sm text-muted" style={{ background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-sm)' }}>📍 {job.location}</span>
+              <span className="text-sm text-muted" style={{ background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-sm)' }}>💼 {job.type}</span>
+              <span className="text-sm text-muted" style={{ background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-sm)' }}>📈 {job.experienceRange}</span>
+              <span className="text-sm text-muted" style={{ background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-sm)' }}>💰 {job.salary}</span>
+            </div>
+
+            <div style={{ margin: '1.5rem 0' }}>
+              <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-primary)' }}>About the Role</h3>
+              <p className="text-secondary" style={{ lineHeight: '1.6' }}>{job.description}</p>
+            </div>
+
+            <div style={{ margin: '1.5rem 0' }}>
+              <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Requirements</h3>
+              <ul style={{ listStyleType: 'disc', paddingLeft: '1.5rem', color: 'var(--text-secondary)' }}>
+                {job.requirements.map((req, idx) => (
+                  <li key={idx} style={{ marginBottom: '0.4rem' }}>{req}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="flex gap-4 mt-4 py-4" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+              {!isRecruiter && (
+                hasApplied ? (
+                  <button className="btn" style={{ flex: 1, padding: '0.8rem', background: 'rgba(16, 185, 129, 0.2)', color: 'var(--success)', cursor: 'default' }}>✓ Application Submitted</button>
+                ) : (
+                  <button className="btn btn-primary flex-1" onClick={onApply} style={{ flex: 1, padding: '0.8rem' }}>Apply Now</button>
+                )
+              )}
+              {isRecruiter && (
+                  <button className="btn" style={{ flex: 1, padding: '0.8rem', background: 'rgba(255, 255, 255, 0.1)', color: 'white', cursor: 'default' }}>Viewing as Recruiter</button>
+              )}
+              <button className="btn btn-secondary" onClick={onClose}>Close</button>
+            </div>
+          </div>
+        </ModalBackdrop>
+      );
+    }
+
+    function ApplicationModal({ job, onClose, onSuccess, currentUser }) {
+      const [loading, setLoading] = useState(false);
+      const [name, setName] = useState(currentUser ? currentUser.name : '');
+      const [email, setEmail] = useState(currentUser ? currentUser.email : '');
+      const fileInputRef = useRef(null);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setTimeout(() => {
+          setLoading(false);
+          onSuccess();
+        }, 1500);
+      };
+
+      return (
+        <ModalBackdrop onClose={onClose}>
+          <div className="glass-panel" style={{ padding: '2rem', background: 'var(--bg-secondary)' }}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 style={{ fontSize: '1.5rem' }}>Apply for {job.title}</h2>
+              <button onClick={onClose} style={{ fontSize: '1.5rem', color: 'var(--text-muted)' }}>&times;</button>
+            </div>
+            <p className="text-muted mb-4">At {job.company}</p>
+
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                 {currentUser && currentUser.resumeFile ? (
+                    <div className="text-sm p-3 mb-2" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid var(--success)', borderRadius: 'var(--radius-md)' }}>
+                       ✅ Attached Resume: <strong>{currentUser.resumeFile}</strong> (from profile)
+                    </div>
+                 ) : (
+                   <div style={{marginBottom: '0.5rem'}}>
+                      <label className="text-sm text-muted" style={{ display: 'block', marginBottom: '0.3rem' }}>Upload Resume Document</label>
+                      <input type="file" ref={fileInputRef} required className="text-sm" accept=".pdf,.doc,.docx" style={{ width: '100%', padding: '0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white' }} />
+                   </div>
+                 )}
+              </div>
+              <div>
+                <label className="text-sm text-muted" style={{ display: 'block', marginBottom: '0.3rem' }}>Full Name</label>
+                <input required type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="John Doe" style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none' }} />
+              </div>
+              <div>
+                <label className="text-sm text-muted" style={{ display: 'block', marginBottom: '0.3rem' }}>Email Address</label>
+                <input required type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="john@example.com" style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none' }} />
+              </div>
+              <div>
+                <label className="text-sm text-muted" style={{ display: 'block', marginBottom: '0.3rem' }}>Portfolio / LinkedIn URL</label>
+                <input type="url" placeholder="https://" style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: 'white', outline: 'none' }} />
+              </div>
+
+              <div className="flex gap-4" style={{ marginTop: '1rem' }}>
+                <button disabled={loading} type="submit" className="btn btn-primary flex-1" style={{ flex: 1, padding: '0.8rem', opacity: loading ? 0.7 : 1 }}>
+                  {loading ? 'Submitting...' : 'Submit Application'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </ModalBackdrop>
+      );
+    }
+
+    function SuccessModal({ onClose, isLoggedIn }) {
+      return (
+        <ModalBackdrop onClose={onClose}>
+          <div className="glass-panel flex-col items-center flex" style={{ padding: '3rem 2rem', background: 'var(--bg-secondary)', textAlign: 'center' }}>
+            <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.2)', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', marginBottom: '1.5rem' }}>
+              ✓
+            </div>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Application Sent!</h2>
+            <p className="text-muted mb-4">Your application has been successfully submitted. {isLoggedIn ? 'You can track its status in your Dashboard.' : ''}</p>
+            <button className="btn btn-primary" onClick={onClose} style={{ padding: '0.6rem 2rem' }}>Close</button>
+          </div>
+        </ModalBackdrop>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
